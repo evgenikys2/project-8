@@ -68,6 +68,118 @@ def _build_context_payload(
     }
 
 
+def _build_assistant_action_schema() -> dict[str, Any]:
+    return {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "WHOOP AI Assistant Action API",
+            "version": "1.0.0",
+            "description": "Minimal action schema for retrieving current WHOOP health context for one user.",
+        },
+        "servers": [{"url": settings.app_base_url}],
+        "paths": {
+            "/health": {
+                "get": {
+                    "operationId": "getHealthStatus",
+                    "summary": "Get service health",
+                    "description": "Returns basic service status and whether private endpoint protection is enabled.",
+                    "responses": {
+                        "200": {
+                            "description": "Health status",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "status": {"type": "string"},
+                                            "app_base_url": {"type": "string"},
+                                            "authorized": {"type": "boolean"},
+                                            "api_key_protected": {"type": "boolean"},
+                                            "api_key_hint": {"type": ["string", "null"]},
+                                        },
+                                        "required": ["status", "authorized", "api_key_protected"],
+                                    }
+                                }
+                            },
+                        }
+                    },
+                }
+            },
+            "/whoop/context": {
+                "get": {
+                    "operationId": "getWhoopContext",
+                    "summary": "Get current WHOOP context",
+                    "description": "Returns a compact snapshot of the user's latest WHOOP profile, recovery, sleep, recent workouts, and summary metrics.",
+                    "security": [{"QueryApiKey": []}],
+                    "responses": {
+                        "200": {
+                            "description": "WHOOP context",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "profile": {"type": "object", "additionalProperties": True},
+                                            "latest_recovery": {"type": "object", "additionalProperties": True},
+                                            "latest_sleep": {"type": "object", "additionalProperties": True},
+                                            "recent_workouts": {
+                                                "type": "array",
+                                                "items": {"type": "object", "additionalProperties": True},
+                                            },
+                                            "summary": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "recovery_score": {"type": ["number", "null"]},
+                                                    "resting_heart_rate": {"type": ["number", "null"]},
+                                                    "hrv_rmssd_milli": {"type": ["number", "null"]},
+                                                    "sleep_performance_percentage": {"type": ["number", "null"]},
+                                                    "sleep_efficiency_percentage": {"type": ["number", "null"]},
+                                                    "recent_workout_count": {"type": "integer"},
+                                                },
+                                            },
+                                        },
+                                        "required": [
+                                            "profile",
+                                            "latest_recovery",
+                                            "latest_sleep",
+                                            "recent_workouts",
+                                            "summary",
+                                        ],
+                                    }
+                                }
+                            },
+                        },
+                        "401": {
+                            "description": "Missing or invalid API key",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "error": {"type": "string"},
+                                            "hint": {"type": "string"},
+                                        },
+                                    }
+                                }
+                            },
+                        },
+                    },
+                }
+            },
+        },
+        "components": {
+            "securitySchemes": {
+                "QueryApiKey": {
+                    "type": "apiKey",
+                    "in": "query",
+                    "name": "api_key",
+                    "description": "Private API key for WHOOP-backed assistant access.",
+                }
+            }
+        },
+    }
+
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     started_at = time.perf_counter()
@@ -87,6 +199,8 @@ async def protect_private_endpoints(request: Request, call_next):
         return await call_next(request)
 
     provided_key = request.headers.get("x-api-key", "")
+    if not provided_key:
+        provided_key = request.query_params.get("api_key", "")
     auth_header = request.headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
         provided_key = auth_header.split(" ", 1)[1].strip()
@@ -154,6 +268,11 @@ async def health() -> dict[str, object]:
         "api_key_protected": bool(settings.app_api_key),
         "api_key_hint": _mask_api_key(settings.app_api_key) if settings.app_api_key else None,
     }
+
+
+@app.get("/openapi/assistant.json")
+async def assistant_openapi() -> dict[str, Any]:
+    return _build_assistant_action_schema()
 
 
 @app.get("/auth/login")

@@ -35,6 +35,7 @@ Core strategy documents:
 - [`docs/TECHNICAL_STRATEGY.md`](./docs/TECHNICAL_STRATEGY.md)
 - [`docs/DEPLOYMENT_STRATEGY.md`](./docs/DEPLOYMENT_STRATEGY.md)
 - [`docs/AI_INTEGRATION_STRATEGY.md`](./docs/AI_INTEGRATION_STRATEGY.md)
+- [`docs/GPT_ACTION_SETUP.md`](./docs/GPT_ACTION_SETUP.md)
 - [`docs/PRIVACY_AND_SECURITY_MODEL.md`](./docs/PRIVACY_AND_SECURITY_MODEL.md)
 - [`docs/ROADMAP.md`](./docs/ROADMAP.md)
 
