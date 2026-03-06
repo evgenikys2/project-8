@@ -78,6 +78,30 @@ def _build_assistant_action_schema() -> dict[str, Any]:
         },
         "servers": [{"url": settings.app_base_url}],
         "paths": {
+            "/health/action": {
+                "get": {
+                    "operationId": "getActionHealthStatus",
+                    "summary": "Get action health",
+                    "description": "Returns lightweight status for assistant action debugging.",
+                    "responses": {
+                        "200": {
+                            "description": "Action health status",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "status": {"type": "string"},
+                                            "assistant_action_ready": {"type": "boolean"},
+                                        },
+                                        "required": ["status", "assistant_action_ready"],
+                                    }
+                                }
+                            },
+                        }
+                    },
+                }
+            },
             "/health": {
                 "get": {
                     "operationId": "getHealthStatus",
@@ -110,7 +134,7 @@ def _build_assistant_action_schema() -> dict[str, Any]:
                     "operationId": "getWhoopContext",
                     "summary": "Get current WHOOP context",
                     "description": "Returns a compact snapshot of the user's latest WHOOP profile, recovery, sleep, recent workouts, and summary metrics.",
-                    "security": [{"QueryApiKey": []}],
+                    "security": [{"ApiKeyAuth": []}],
                     "responses": {
                         "200": {
                             "description": "WHOOP context",
@@ -170,10 +194,10 @@ def _build_assistant_action_schema() -> dict[str, Any]:
         "components": {
             "schemas": {},
             "securitySchemes": {
-                "QueryApiKey": {
+                "ApiKeyAuth": {
                     "type": "apiKey",
-                    "in": "query",
-                    "name": "api_key",
+                    "in": "header",
+                    "name": "X-API-Key",
                     "description": "Private API key for WHOOP-backed assistant access.",
                 }
             }
@@ -201,10 +225,16 @@ async def protect_private_endpoints(request: Request, call_next):
 
     provided_key = request.headers.get("x-api-key", "")
     if not provided_key:
+        provided_key = request.headers.get("api-key", "")
+    if not provided_key:
+        provided_key = request.headers.get("x-api-key".upper(), "")
+    if not provided_key:
         provided_key = request.query_params.get("api_key", "")
     auth_header = request.headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
         provided_key = auth_header.split(" ", 1)[1].strip()
+    elif auth_header and not provided_key:
+        provided_key = auth_header.strip()
 
     if not provided_key or not secrets.compare_digest(provided_key, settings.app_api_key):
         return JSONResponse(
@@ -268,6 +298,14 @@ async def health() -> dict[str, object]:
         "authorized": token_data is not None,
         "api_key_protected": bool(settings.app_api_key),
         "api_key_hint": _mask_api_key(settings.app_api_key) if settings.app_api_key else None,
+    }
+
+
+@app.get("/health/action")
+async def action_health() -> dict[str, object]:
+    return {
+        "status": "ok",
+        "assistant_action_ready": True,
     }
 
 
