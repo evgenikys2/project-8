@@ -54,6 +54,42 @@ cp .env.example .env
 uvicorn app.main:app --reload
 ```
 
+## Deploy on Render
+
+The project includes a minimal [`render.yaml`](./render.yaml) for a first HTTPS deployment.
+
+### Render setup
+
+1. Create a new Web Service from this repository in Render.
+2. Render should detect:
+   - build command: `pip install -r requirements.txt`
+   - start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+3. Add environment variables in Render:
+
+```text
+WHOOP_CLIENT_ID
+WHOOP_CLIENT_SECRET
+WHOOP_REDIRECT_URI
+WHOOP_SCOPES
+APP_BASE_URL
+APP_API_KEY
+```
+
+### Recommended values
+
+- `WHOOP_REDIRECT_URI`: your deployed callback URL, for example `https://your-service.onrender.com/auth/callback`
+- `APP_BASE_URL`: your deployed base URL, for example `https://your-service.onrender.com`
+- `APP_API_KEY`: a long random secret for protecting WHOOP-backed endpoints
+
+### After deploy
+
+Check:
+
+```bash
+curl https://YOUR_RENDER_DOMAIN/health
+curl -H "X-API-Key: YOUR_APP_API_KEY" https://YOUR_RENDER_DOMAIN/whoop/context
+```
+
 Required environment variables:
 
 ```env
