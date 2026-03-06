@@ -68,6 +68,53 @@ def _build_context_payload(
     }
 
 
+def _build_public_assistant_context(
+    recovery: dict[str, Any],
+    sleep: dict[str, Any],
+    workouts: dict[str, Any],
+) -> dict[str, Any]:
+    latest_recovery = (recovery.get("records") or [None])[0] or {}
+    latest_sleep = (sleep.get("records") or [None])[0] or {}
+    recent_workouts = workouts.get("records") or []
+
+    def slim_workout(item: dict[str, Any]) -> dict[str, Any]:
+        score = item.get("score") or {}
+        return {
+            "sport_name": item.get("sport_name"),
+            "start": item.get("start"),
+            "end": item.get("end"),
+            "strain": score.get("strain"),
+            "average_heart_rate": score.get("average_heart_rate"),
+            "max_heart_rate": score.get("max_heart_rate"),
+        }
+
+    recovery_score = latest_recovery.get("score") or {}
+    sleep_score = latest_sleep.get("score") or {}
+    sleep_stage_summary = sleep_score.get("stage_summary") or {}
+
+    return {
+        "readiness": {
+            "recovery_score": recovery_score.get("recovery_score"),
+            "resting_heart_rate": recovery_score.get("resting_heart_rate"),
+            "hrv_rmssd_milli": recovery_score.get("hrv_rmssd_milli"),
+            "spo2_percentage": recovery_score.get("spo2_percentage"),
+        },
+        "sleep": {
+            "sleep_performance_percentage": sleep_score.get("sleep_performance_percentage"),
+            "sleep_efficiency_percentage": sleep_score.get("sleep_efficiency_percentage"),
+            "sleep_consistency_percentage": sleep_score.get("sleep_consistency_percentage"),
+            "respiratory_rate": sleep_score.get("respiratory_rate"),
+            "total_in_bed_time_milli": sleep_stage_summary.get("total_in_bed_time_milli"),
+            "total_awake_time_milli": sleep_stage_summary.get("total_awake_time_milli"),
+        },
+        "recent_workouts": [slim_workout(item) for item in recent_workouts[:5]],
+        "summary": {
+            "recent_workout_count": len(recent_workouts[:5]),
+            "latest_workout_sport": (recent_workouts[0].get("sport_name") if recent_workouts else None),
+        },
+    }
+
+
 def _build_assistant_action_schema() -> dict[str, Any]:
     return {
         "openapi": "3.1.0",
@@ -205,6 +252,74 @@ def _build_assistant_action_schema() -> dict[str, Any]:
     }
 
 
+def _build_assistant_public_schema() -> dict[str, Any]:
+    return {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "WHOOP AI Assistant Public Action API",
+            "version": "1.0.0",
+            "description": "Action schema for retrieving a reduced WHOOP context suitable for assistant use.",
+        },
+        "servers": [{"url": settings.app_base_url}],
+        "paths": {
+            "/health/action": {
+                "get": {
+                    "operationId": "getActionHealthStatus",
+                    "summary": "Get action health",
+                    "description": "Returns lightweight status for assistant action debugging.",
+                    "responses": {
+                        "200": {
+                            "description": "Action health status",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "status": {"type": "string"},
+                                            "assistant_action_ready": {"type": "boolean"},
+                                        },
+                                        "required": ["status", "assistant_action_ready"],
+                                    }
+                                }
+                            },
+                        }
+                    },
+                }
+            },
+            "/assistant/context": {
+                "get": {
+                    "operationId": "getAssistantContext",
+                    "summary": "Get reduced WHOOP context",
+                    "description": "Returns a reduced WHOOP context optimized for assistant reasoning without direct personal identifiers.",
+                    "responses": {
+                        "200": {
+                            "description": "Reduced WHOOP context",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "readiness": {"type": "object", "additionalProperties": True},
+                                            "sleep": {"type": "object", "additionalProperties": True},
+                                            "recent_workouts": {
+                                                "type": "array",
+                                                "items": {"type": "object", "additionalProperties": True},
+                                            },
+                                            "summary": {"type": "object", "additionalProperties": True},
+                                        },
+                                        "required": ["readiness", "sleep", "recent_workouts", "summary"],
+                                    }
+                                }
+                            },
+                        }
+                    },
+                }
+            },
+        },
+        "components": {"schemas": {}},
+    }
+
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     started_at = time.perf_counter()
@@ -314,6 +429,11 @@ async def assistant_openapi() -> dict[str, Any]:
     return _build_assistant_action_schema()
 
 
+@app.get("/openapi/assistant-public.json")
+async def assistant_public_openapi() -> dict[str, Any]:
+    return _build_assistant_public_schema()
+
+
 @app.get("/auth/login")
 async def auth_login(request: Request):
     _require_oauth_config()
@@ -380,3 +500,11 @@ async def whoop_context() -> dict[str, Any]:
     sleep = await whoop_client.get_sleep(limit=1)
     workouts = await whoop_client.get_workouts(limit=5)
     return _build_context_payload(profile, recovery, sleep, workouts)
+
+
+@app.get("/assistant/context")
+async def assistant_context() -> dict[str, Any]:
+    recovery = await whoop_client.get_recovery(limit=1)
+    sleep = await whoop_client.get_sleep(limit=1)
+    workouts = await whoop_client.get_workouts(limit=5)
+    return _build_public_assistant_context(recovery, sleep, workouts)

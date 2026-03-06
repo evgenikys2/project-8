@@ -5,28 +5,32 @@ This guide prepares the current WHOOP deployment for a Custom GPT action.
 ## Purpose
 
 Use the hosted WHOOP backend as a retrieval action so an assistant can fetch current WHOOP context
- before answering health, training, recovery, or nutrition questions.
+before answering health, training, recovery, or nutrition questions.
 
 ## Hosted API
 
 - Base URL: `https://project-8-efjk.onrender.com`
-- OpenAPI schema URL: `https://project-8-efjk.onrender.com/openapi/assistant.json`
-- Main action endpoint: `GET /whoop/context`
+- Public action schema URL: `https://project-8-efjk.onrender.com/openapi/assistant-public.json`
+- Public action endpoint: `GET /assistant/context`
+- Private full-context endpoint: `GET /whoop/context`
 
-## Authentication
+## Why the public action schema exists
 
-The action schema uses an API key in the query string:
+Some GPT action setups do not reliably send custom API key headers to private endpoints.
 
-- parameter name: `api_key`
-- value: your `APP_API_KEY`
+To keep the GPT flow simple, the deployment exposes a reduced assistant-only endpoint that:
 
-This was chosen because OpenAI's production notes for actions say custom headers are not supported.
+- does not require GPT-side auth setup
+- excludes direct personal identifiers such as email, name, and user ID
+- returns only readiness, sleep, and recent workout context needed for assistant reasoning
+
+The private endpoint remains available for direct API use with `APP_API_KEY`.
 
 ## Recommended GPT behavior
 
 The assistant should:
 
-- fetch `whoop/context` before giving substantive health guidance
+- fetch `assistant/context` before giving substantive health guidance
 - use the latest recovery, sleep, and workout data in its reasoning
 - acknowledge uncertainty when data is missing or stale
 - avoid medical diagnosis claims
@@ -52,10 +56,10 @@ Do not present yourself as a doctor and do not give diagnosis-level claims.
 3. Import the schema from:
 
 ```text
-https://project-8-efjk.onrender.com/openapi/assistant.json
+https://project-8-efjk.onrender.com/openapi/assistant-public.json
 ```
 
-4. Configure the action to use your API key value for the schema's `api_key` requirement.
+4. Leave action authentication set to `Nothing`.
 5. Add the instruction block above.
 6. Test prompts such as:
 
@@ -67,5 +71,6 @@ https://project-8-efjk.onrender.com/openapi/assistant.json
 ## Notes
 
 - The current deployment is single-user and personal-first.
-- The action retrieves the owner's WHOOP context, not multi-user data.
+- The public action schema is intentionally reduced for assistant use.
+- The private endpoint `/whoop/context` still exists for direct API access with `APP_API_KEY`.
 - If the backend domain changes later, update the schema URL and the server URL in the deployed app.

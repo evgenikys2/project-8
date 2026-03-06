@@ -9,6 +9,7 @@ The project already supports a working WHOOP OAuth flow, real data retrieval, an
 - Single-user, personal-first backend
 - Real WHOOP data ingestion with token refresh
 - Stable endpoints for `profile`, `recovery`, `sleep`, `workouts`, and `whoop/context`
+- Reduced assistant endpoint for GPT-style integrations
 - API-key protection for private WHOOP endpoints
 - Public-repo preparation without exposing secrets or personal data
 
@@ -22,6 +23,8 @@ The project already supports a working WHOOP OAuth flow, real data retrieval, an
 - `GET /whoop/sleep`
 - `GET /whoop/workouts`
 - `GET /whoop/context`
+- `GET /assistant/context`
+- `GET /openapi/assistant-public.json`
 
 ## Documentation
 
@@ -94,6 +97,7 @@ Check:
 ```bash
 curl https://YOUR_RENDER_DOMAIN/health
 curl -H "X-API-Key: YOUR_APP_API_KEY" https://YOUR_RENDER_DOMAIN/whoop/context
+curl https://YOUR_RENDER_DOMAIN/assistant/context
 ```
 
 Required environment variables:
@@ -114,6 +118,7 @@ This repository is intended to become public, but runtime secrets and personal W
 - Safe to publish: source code, docs, `.env.example`
 - Never publish: `.env`, `data/whoop_tokens.json`, raw access tokens, refresh tokens, personal exports
 - Use `APP_API_KEY` on any deployed environment that exposes WHOOP-backed endpoints
+- Use `GET /assistant/context` for assistant integrations that need a reduced no-auth payload
 
 See [`SECURITY.md`](./SECURITY.md) and [`docs/PRIVACY_AND_SECURITY_MODEL.md`](./docs/PRIVACY_AND_SECURITY_MODEL.md) for the full model.
 
