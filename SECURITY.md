@@ -21,12 +21,13 @@ This repository is safe to make public only if secrets and personal WHOOP data s
 
 When `APP_API_KEY` is set, these routes should be treated as private:
 
-- `/auth/login`
 - `/whoop/profile`
 - `/whoop/recovery`
 - `/whoop/sleep`
 - `/whoop/workouts`
 - `/whoop/context`
+
+`/auth/login` remains open so a browser can start the WHOOP OAuth flow.
 
 `/auth/callback` remains open because WHOOP redirects there directly.
 
