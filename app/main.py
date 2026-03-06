@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Optional
 
 from fastapi import FastAPI, Query, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.config import get_settings
 from app.errors import WhoopAPIError
@@ -35,6 +35,104 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="WHOOP AI Assistant", version="0.1.0", lifespan=lifespan)
+
+PRIVACY_POLICY_HTML = """<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WHOOP AI Assistant Privacy Policy</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f5f7fb;
+        color: #162033;
+      }
+      main {
+        max-width: 760px;
+        margin: 48px auto;
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 40px 28px;
+        box-shadow: 0 12px 40px rgba(22, 32, 51, 0.08);
+      }
+      h1, h2 {
+        margin-top: 0;
+      }
+      h1 {
+        font-size: 2rem;
+      }
+      h2 {
+        margin-top: 32px;
+        font-size: 1.2rem;
+      }
+      p, li {
+        line-height: 1.6;
+      }
+      code {
+        background: #eef2f7;
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>WHOOP AI Assistant Privacy Policy</h1>
+      <p>
+        WHOOP AI Assistant is a personal-first service that retrieves WHOOP health and activity data
+        to generate context for an AI assistant.
+      </p>
+
+      <h2>What data is used</h2>
+      <p>The service may access the following WHOOP data, depending on the permissions granted:</p>
+      <ul>
+        <li>profile data</li>
+        <li>recovery data</li>
+        <li>sleep data</li>
+        <li>workout data</li>
+      </ul>
+
+      <h2>How data is used</h2>
+      <p>
+        The data is used only to retrieve current WHOOP context and provide AI-assisted guidance related
+        to recovery, training, sleep, readiness, and similar wellness topics.
+      </p>
+
+      <h2>Storage and security</h2>
+      <p>
+        OAuth tokens may be stored on the server hosting the application so the service can refresh access
+        and continue retrieving WHOOP data. Runtime secrets are not intended for public access.
+      </p>
+
+      <h2>Data sharing</h2>
+      <p>
+        The service is intended for personal use. WHOOP data is not sold. Public assistant endpoints are
+        designed to return a reduced context without direct personal identifiers.
+      </p>
+
+      <h2>Revoking access</h2>
+      <p>
+        You can stop using the service at any time and revoke WHOOP access from the WHOOP developer or
+        account settings associated with the application.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        For project-related questions, use the repository or deployment owner contact channel associated
+        with this project.
+      </p>
+
+      <h2>Last updated</h2>
+      <p>March 6, 2026</p>
+    </main>
+  </body>
+</html>
+"""
 
 
 def _mask_api_key(api_key: str) -> str:
@@ -414,6 +512,11 @@ async def health() -> dict[str, object]:
         "api_key_protected": bool(settings.app_api_key),
         "api_key_hint": _mask_api_key(settings.app_api_key) if settings.app_api_key else None,
     }
+
+
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_policy() -> str:
+    return PRIVACY_POLICY_HTML
 
 
 @app.get("/health/action")
