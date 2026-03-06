@@ -70,7 +70,7 @@ def _build_context_payload(
 
 def _build_assistant_action_schema() -> dict[str, Any]:
     return {
-        "openapi": "3.1.0",
+        "openapi": "3.0.3",
         "info": {
             "title": "WHOOP AI Assistant Action API",
             "version": "1.0.0",
@@ -168,6 +168,7 @@ def _build_assistant_action_schema() -> dict[str, Any]:
             },
         },
         "components": {
+            "schemas": {},
             "securitySchemes": {
                 "QueryApiKey": {
                     "type": "apiKey",
