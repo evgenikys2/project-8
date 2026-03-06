@@ -81,6 +81,11 @@ APP_API_KEY
 - `APP_BASE_URL`: your deployed base URL, for example `https://your-service.onrender.com`
 - `APP_API_KEY`: a long random secret for protecting WHOOP-backed endpoints
 
+Note:
+
+- `/auth/login` stays open so a browser can begin the WHOOP OAuth flow
+- `/whoop/*` endpoints remain protected by `APP_API_KEY`
+
 ### After deploy
 
 Check:

@@ -79,7 +79,7 @@ async def log_requests(request: Request, call_next):
 
 @app.middleware("http")
 async def protect_private_endpoints(request: Request, call_next):
-    protected_paths = ("/whoop/", "/auth/login")
+    protected_paths = ("/whoop/",)
     if not any(request.url.path.startswith(path) for path in protected_paths):
         return await call_next(request)
 
